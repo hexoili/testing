@@ -1028,6 +1028,7 @@
                 addMessageToUI(message, 'user');
 
                 // Play send message sound
+                sendMessageSound.src = "https://github.com/hexoili/testing/raw/refs/heads/main/test.mp3"; // Set the correct source
                 sendMessageSound.play(); // Play the sound here
 
                 // Add user message to chat
@@ -1061,7 +1062,7 @@
                     respondToMessage(message);
                 }, 1500);
             }
-
+            
             function showTypingIndicator() {
                 const typingElement = document.createElement('div');
                 typingElement.className = 'message ai typing';
