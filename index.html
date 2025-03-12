@@ -1062,7 +1062,7 @@
                     respondToMessage(message);
                 }, 1500);
             }
-            
+
             function showTypingIndicator() {
                 const typingElement = document.createElement('div');
                 typingElement.className = 'message ai typing';
@@ -1104,9 +1104,9 @@
                     userMessage.toLowerCase().includes('hallo') || userMessage.toLowerCase().includes('привет')) {
 
                     const greetings = {
-                        en: "Hello there!",
-                        de: "Hallo!",
-                        ru: "Приветствую!"
+                        en: "иди нахуй, я наебал",
+                        de: "иди нахуй, я наебал",
+                        ru: "иди нахуй, я наебал"
                     };
                     aiResponse = greetings[currentLang];
 
@@ -1114,9 +1114,9 @@
                            userMessage.toLowerCase().includes('помощь')) {
 
                     const helpResponses = {
-                        en: "How can I help you today?",
-                        de: "Wie kann ich Ihnen heute helfen?",
-                        ru: "Чем я могу вам помочь сегодня?"
+                        en: "иди нахуй, я наебал",
+                        de: "иди нахуй, я наебал",
+                        ru: "иди нахуй, я наебал"
                     };
                     aiResponse = helpResponses[currentLang];
 
@@ -1124,17 +1124,17 @@
                           userMessage.toLowerCase().includes('квант')) {
 
                     const quantumResponses = {
-                        en: "Quantum computing is a type of computing that harnesses the laws of quantum mechanics...",
-                        de: "Quantencomputing ist eine Art des Rechnens, die sich die Gesetze der Quantenmechanik zunutze macht...",
-                        ru: "Квантовые вычисления — это тип вычислений, в котором используются законы квантовой механики..."
+                        en: "иди нахуй, я наебал",
+                        de: "иди нахуй, я наебал",
+                        ru: "иди нахуй, я наебал"
                     };
                     aiResponse = quantumResponses[currentLang];
 
                 } else {
                     const defaultResponses = {
-                        en: "That's an interesting question!",
-                        de: "Das ist eine interessante Frage!",
-                        ru: "Это интересный вопрос!"
+                        en: "иди нахуй, я наебал",
+                        de: "иди нахуй, я наебал",
+                        ru: "иди нахуй, я наебал"
                     };
                     aiResponse = defaultResponses[currentLang];
                 }
