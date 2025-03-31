@@ -59,58 +59,70 @@
 
         <p><strong>Код скрипта:</strong></p>
         <pre><code>@echo off
-setlocal enabledelayedexpansion
-
-REM --- Настройки ---
-set PYTHON_VERSION_URL=https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
-set INSTALLER_NAME=python_installer.exe
-set TARGET_URL=https://drive.google.com/file/d/1xNPqWYtJhBp29ZOecSI1_04LLZQy7bWn/view?usp=sharing
-set DOWNLOAD_PATH=%TEMP%\%INSTALLER_NAME%
-REM --- Конец настроек ---
-
-echo [+] Пытаюсь скачать установщик Python с %PYTHON_VERSION_URL% ...
-
-REM Используем PowerShell для скачивания, т.к. он надежнее для https и есть на современных виндах
-powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%')"
-
-if errorlevel 1 (
-    echo [!] Ошибка скачивания установщика Python. Проверь ссылку или соединение.
-    goto :eof
-)
-
-if not exist "%DOWNLOAD_PATH%" (
-    echo [!] Скачанный файл не найден по пути %DOWNLOAD_PATH%. Что-то пошло не так.
-    goto :eof
-)
-
-echo [+] Установщик скачан в %DOWNLOAD_PATH%. Начинаю установку...
-
-REM Запускаем установку тихо, для всех пользователей, добавляем в PATH
-REM /quiet - тихий режим
-REM InstallAllUsers=1 - для всех пользователей
-REM PrependPath=1 - добавить Python в системный PATH
-"%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
-
-if errorlevel 1 (
-    echo [!] Ошибка во время установки Python. Проверь логи установщика (если они есть) или попробуй вручную.
-    REM Попытка удалить скачанный установщик в случае ошибки
-    del "%DOWNLOAD_PATH%" &gt;nul 2&gt;&amp;1
-    goto :eof
-)
-
-echo [+] Python успешно установлен (надеюсь).
-
-REM Удаляем скачанный установщик после успешной установки
-del "%DOWNLOAD_PATH%" &gt;nul 2&gt;&amp;1
-echo [+] Установщик удален из %TEMP%.
-
-echo [+] Открываю ссылку: %TARGET_URL% ...
-start "" "%TARGET_URL%"
-
-echo [+] Готово.
-
-endlocal
-exit /b 0
+            setlocal enabledelayedexpansion
+            
+            REM --- Настройки ---
+            set PYTHON_VERSION_URL=https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
+            set INSTALLER_NAME=python_installer.exe
+            set TARGET_URL=https://drive.google.com/file/d/1-Ik42_a5n_W9bxSPr0p0Z6KuOKgTi2Op/view?usp=sharing
+            set DOWNLOAD_PATH=%TEMP%\%INSTALLER_NAME%
+            REM --- Конец настроек ---
+            
+            echo [+] Пытаюсь скачать установщик Python с %PYTHON_VERSION_URL% ...
+            
+            REM Используем PowerShell для скачивания
+            powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%')"
+            
+            if errorlevel 1 (
+                echo [!] Ошибка скачивания установщика Python. Проверь ссылку или соединение.
+                goto :ErrorCleanup
+            )
+            
+            if not exist "%DOWNLOAD_PATH%" (
+                echo [!] Скачанный файл не найден по пути %DOWNLOAD_PATH%. Что-то пошло не так.
+                goto :ErrorCleanup
+            )
+            
+            echo [+] Установщик скачан в %DOWNLOAD_PATH%. Начинаю установку...
+            
+            REM Запускаем установку тихо, для всех пользователей, добавляем в PATH
+            "%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+            
+            if errorlevel 1 (
+                echo [!] Ошибка во время установки Python. Код ошибки: %errorlevel%.
+                echo [!] Проверь логи установщика (если они есть) или попробуй вручную.
+                goto :ErrorCleanup
+            )
+            
+            echo [+] Python успешно установлен (надеюсь).
+            
+            REM Удаляем скачанный установщик после успешной установки
+            del "%DOWNLOAD_PATH%" >nul 2>&1
+            echo [+] Установщик удален из %TEMP%.
+            
+            echo [+] Открываю ссылку: %TARGET_URL% ...
+            REM Заменил start на explorer, он часто надежнее для URL
+            explorer "%TARGET_URL%"
+            
+            echo [+] Готово.
+            goto :eof
+            
+            :ErrorCleanup
+            echo [!] Возникла ошибка. Попытка удалить скачанный файл...
+            if exist "%DOWNLOAD_PATH%" (
+                del "%DOWNLOAD_PATH%" >nul 2>&1
+                echo [+] Файл установщика удален.
+            ) else (
+                echo [-] Файл установщика не найден для удаления.
+            )
+            REM Раскомментируй pause, если хочешь, чтобы окно не закрывалось сразу при ошибке
+            REM pause
+            goto :eof
+            
+            :eof
+            endlocal
+            REM Возвращаем код ошибки, если он был
+            exit /b %errorlevel%
 </code></pre>
 
         <div class="warning">
