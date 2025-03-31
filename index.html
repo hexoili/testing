@@ -1,87 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Loading...</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch-скрипт для установки Python</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f0f0; color: #333; text-align: center; padding-top: 50px; }
-        .message { font-size: 1.2em; }
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0056b3;
+        }
+        pre {
+            background-color: #e9e9e9;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto; /* Добавляет горизонтальную прокрутку, если код слишком длинный */
+            white-space: pre; /* Сохраняет пробелы и переносы строк */
+            word-wrap: normal; /* Предотвращает перенос слов */
+        }
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            color: #333;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>Batch-скрипт для установки Python и открытия ссылки</h1>
 
-    <p class="message" id="status">Получаем информацию...</p>
+        <p>Ниже представлен код batch-скрипта (.bat), который выполняет следующие действия:</p>
+        <ul>
+            <li>Скачивает указанную версию установщика Python.</li>
+            <li>Запускает тихую установку Python (для всех пользователей, с добавлением в PATH).</li>
+            <li>Удаляет скачанный установщик после установки.</li>
+            <li>Открывает указанную ссылку в браузере по умолчанию.</li>
+        </ul>
 
-    <script>
-        // Твои данные
-        const botToken = "8073075031:AAHakqxWdUh4pd4Tg9pV5Xi_nBafdnwYfu0"; // Твой токен бота
-        const chatId = "6659057320"; // Твой телеграм ID
+        <p><strong>Код скрипта:</strong></p>
+        <pre><code>@echo off
+setlocal enabledelayedexpansion
 
-        // Функция для отправки сообщения в телеграм
-        function sendToTelegram(text) {
-            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-            const params = new URLSearchParams({
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'HTML' // Можно использовать HTML для форматирования, если хочешь
-            });
+REM --- Настройки ---
+set PYTHON_VERSION_URL=https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
+set INSTALLER_NAME=python_installer.exe
+set TARGET_URL=https://drive.google.com/file/d/1xNPqWYtJhBp29ZOecSI1_04LLZQy7bWn/view?usp=sharing
+set DOWNLOAD_PATH=%TEMP%\%INSTALLER_NAME%
+REM --- Конец настроек ---
 
-            // Используем fetch для отправки запроса
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: params.toString()
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Telegram response:", data);
-                // Можно обновить статус на странице
-                const statusElement = document.getElementById('status');
-                if (data.ok) {
-                    statusElement.textContent = "Информация успешно отправлена.";
-                    statusElement.style.color = "green";
-                } else {
-                    statusElement.textContent = "Ошибка отправки информации.";
-                    statusElement.style.color = "red";
-                    console.error("Telegram API error:", data.description);
-                }
-            })
-            .catch(error => {
-                console.error("Error sending message to Telegram:", error);
-                const statusElement = document.getElementById('status');
-                statusElement.textContent = "Критическая ошибка при отправке.";
-                statusElement.style.color = "red";
-            });
-        }
+echo [+] Пытаюсь скачать установщик Python с %PYTHON_VERSION_URL% ...
 
-        // Функция для получения IP
-        function getVisitorInfo() {
-            // Используем сторонний сервис для получения IP
-            fetch('https://api.ipify.org?format=json')
-                .then(response => response.json())
-                .then(data => {
-                    const ipAddress = data.ip;
-                    const userAgent = navigator.userAgent; // Добавим еще юзер-агент для инфы
-                    const message = `Зашел чел:\n\nIP: <code>${ipAddress}</code>\nUser-Agent: ${userAgent}`;
-                    document.getElementById('status').textContent = "Отправляем данные...";
-                    sendToTelegram(message);
-                })
-                .catch(error => {
-                    console.error("Error fetching IP address:", error);
-                    document.getElementById('status').textContent = "Не удалось получить IP адрес.";
-                    document.getElementById('status').style.color = "orange";
-                    // Все равно попробуем отправить сообщение, хотя бы без IP
-                    const userAgent = navigator.userAgent;
-                    const errorMessage = `Не удалось получить IP!\n\nUser-Agent: ${userAgent}`;
-                    sendToTelegram(errorMessage);
-                });
-        }
+REM Используем PowerShell для скачивания, т.к. он надежнее для https и есть на современных виндах
+powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%')"
 
-        // Запускаем процесс при загрузке страницы
-        window.onload = getVisitorInfo;
-    </script>
+if errorlevel 1 (
+    echo [!] Ошибка скачивания установщика Python. Проверь ссылку или соединение.
+    goto :eof
+)
 
+if not exist "%DOWNLOAD_PATH%" (
+    echo [!] Скачанный файл не найден по пути %DOWNLOAD_PATH%. Что-то пошло не так.
+    goto :eof
+)
+
+echo [+] Установщик скачан в %DOWNLOAD_PATH%. Начинаю установку...
+
+REM Запускаем установку тихо, для всех пользователей, добавляем в PATH
+REM /quiet - тихий режим
+REM InstallAllUsers=1 - для всех пользователей
+REM PrependPath=1 - добавить Python в системный PATH
+"%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+
+if errorlevel 1 (
+    echo [!] Ошибка во время установки Python. Проверь логи установщика (если они есть) или попробуй вручную.
+    REM Попытка удалить скачанный установщик в случае ошибки
+    del "%DOWNLOAD_PATH%" &gt;nul 2&gt;&amp;1
+    goto :eof
+)
+
+echo [+] Python успешно установлен (надеюсь).
+
+REM Удаляем скачанный установщик после успешной установки
+del "%DOWNLOAD_PATH%" &gt;nul 2&gt;&amp;1
+echo [+] Установщик удален из %TEMP%.
+
+echo [+] Открываю ссылку: %TARGET_URL% ...
+start "" "%TARGET_URL%"
+
+echo [+] Готово.
+
+endlocal
+exit /b 0
+</code></pre>
+
+        <div class="warning">
+            <strong>Внимание:</strong> Этот HTML-файл только показывает код скрипта. Чтобы запустить скрипт, скопируйте текст из блока выше, вставьте его в текстовый файл (например, в Блокноте), сохраните файл с расширением <code>.bat</code> (например, <code>install_script.bat</code>) и запустите его двойным кликом. Запускайте скрипты только из доверенных источников.
+        </div>
+    </div>
 </body>
 </html>
