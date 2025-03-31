@@ -43,6 +43,21 @@
             border-radius: 4px;
             margin-top: 15px;
         }
+        .download-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 15px;
+            text-decoration: none; /* Для ссылки, если делать через нее */
+        }
+        .download-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -55,131 +70,167 @@
             <li>Запускает тихую установку Python (для всех пользователей, с добавлением в PATH).</li>
             <li>Удаляет скачанный установщик после установки.</li>
             <li>Открывает указанную ссылку в браузере по умолчанию.</li>
+            <li>Скачивает Python-скрипт с Pastebin и сохраняет его локально.</li>
+            <li>Устанавливает необходимые Python-библиотеки (requests, windows-curses).</li>
         </ul>
 
         <p><strong>Код скрипта:</strong></p>
-        <pre><code>         @echo off
-            setlocal enabledelayedexpansion
-            
-            REM --- Настройки ---
-            set PYTHON_VERSION_URL=https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
-            set INSTALLER_NAME=python_installer.exe
-            set TARGET_URL=https://drive.google.com/file/d/1vLdYcZlZQleSTf_Uaqs9wNjhVX6pLtjq/view?usp=sharing
-            set SCRIPT_URL=https://pastebin.com/raw/2YeByF9y
-            set SCRIPT_PATH=%~dp0code.py
-            set DOWNLOAD_PATH=%TEMP%\%INSTALLER_NAME%
-            REM --- Конец настроек ---
-            
-            echo [+] Пытаюсь скачать установщик Python с %PYTHON_VERSION_URL% ...
-            
-            REM Используем PowerShell для скачивания
-            powershell -Command "try { (New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%') } catch { Write-Error $_; exit 1 }"
-            
-            if errorlevel 1 (
-                echo [!] Ошибка скачивания установщика Python. Проверь ссылку или соединение.
-                goto :ErrorCleanup
-            )
-            
-            if not exist "%DOWNLOAD_PATH%" (
-                echo [!] Скачанный файл не найден по пути %DOWNLOAD_PATH%. Что-то пошло не так.
-                goto :ErrorCleanup
-            )
-            
-            echo [+] Установщик скачан в %DOWNLOAD_PATH%. Начинаю установку...
-            
-            REM Запускаем установку тихо, для всех пользователей, добавляем в PATH
-            "%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir="%ProgramFiles%\Python312"
-            
-            REM Ждем немного, чтобы установка точно завершилась и PATH обновился (хотя для текущей сессии это может не сработать сразу)
-            REM timeout /t 5 /nobreak > nul
-            
-            REM Проверяем установку, ищем python.exe
-            REM Пробуем стандартные пути, если PATH еще не обновился в текущей сессии
-            set "PYTHON_EXE="
-            if exist "%ProgramFiles%\Python312\python.exe" (
-                set "PYTHON_EXE=%ProgramFiles%\Python312\python.exe"
-            ) else if exist "%LocalAppData%\Programs\Python\Python312\python.exe" (
-                set "PYTHON_EXE=%LocalAppData%\Programs\Python\Python312\python.exe"
-            ) else (
-                REM Пробуем через PATH, надеясь, что он обновился
-                where python >nul 2>nul
-                if not errorlevel 1 (
-                    for /f "delims=" %%i in ('where python') do (
-                        if not defined PYTHON_EXE set "PYTHON_EXE=%%i"
-                    )
-                )
-            )
-            
-            if not defined PYTHON_EXE (
-                echo [!] Не удалось найти python.exe после установки. Установка могла пройти неудачно или PATH не обновился.
-                echo [!] Попробуй перезапустить командную строку или проверить установку вручную.
-                goto :ErrorCleanup
-            )
-            
-            echo [+] Python вроде как установлен в %PYTHON_EXE%.
-            echo [+] Обновляю pip...
-            "%PYTHON_EXE%" -m pip install --upgrade pip
-            if errorlevel 1 (
-                echo [!] Ошибка обновления pip. Попробуй запустить 'python -m pip install --upgrade pip' вручную.
-                REM Не прерываем, возможно старый pip сработает
-                REM goto :ErrorCleanup
-            ) else (
-                echo [+] pip обновлен.
-            )
-            
-            echo [+] Устанавливаю библиотеки requests и windows-curses...
-            "%PYTHON_EXE%" -m pip install requests windows-curses
-            if errorlevel 1 (
-                echo [!] Ошибка установки библиотек requests/windows-curses. Убедись, что pip работает и есть интернет.
-                goto :ErrorCleanup
-            )
-            echo [+] Библиотеки установлены.
-            
-            echo [+] Создаю и заполняю файл code.py из %SCRIPT_URL%...
-            powershell -Command "try { (New-Object System.Net.WebClient).DownloadFile('%SCRIPT_URL%', '%SCRIPT_PATH%') } catch { Write-Error $_; exit 1 }"
-            if errorlevel 1 (
-                echo [!] Ошибка скачивания скрипта из Pastebin в %SCRIPT_PATH%. Проверь ссылку или доступ к папке.
-                goto :ErrorCleanup
-            )
-            if not exist "%SCRIPT_PATH%" (
-                echo [!] Файл %SCRIPT_PATH% не найден после скачивания. Что-то пошло не так.
-                goto :ErrorCleanup
-            )
-            echo [+] Файл code.py успешно создан и заполнен в %SCRIPT_PATH%.
-            
-            REM Удаляем скачанный установщик после успешной установки
-            del "%DOWNLOAD_PATH%" >nul 2>&1
-            echo [+] Установщик Python удален из %TEMP%.
-            
-            echo [+] Открываю ссылку: %TARGET_URL% ...
-            REM Заменил start на explorer, он часто надежнее для URL
-            explorer "%TARGET_URL%"
-            
-            echo [+] Готово. Скрипт code.py и библиотеки установлены.
-            goto :eof
-            
-            :ErrorCleanup
-            echo [!] Возникла ошибка во время выполнения скрипта.
-            echo [!] Попытка удалить скачанный файл установщика Python...
-            if exist "%DOWNLOAD_PATH%" (
-                del "%DOWNLOAD_PATH%" >nul 2>&1
-                echo [+] Файл установщика удален из %TEMP%.
-            ) else (
-                echo [-] Файл установщика не найден для удаления (%DOWNLOAD_PATH%).
-            )
-            REM Раскомментируй pause, если хочешь, чтобы окно не закрывалось сразу при ошибке
-            REM pause
-            goto :eof
-            
-            :eof
-            endlocal
-            REM Возвращаем код ошибки, если он был
-            exit /b %errorlevel%
-</code></pre>
+        <pre><code id="batch-script-code">@echo off
+setlocal enabledelayedexpansion
+
+REM --- Настройки ---
+set PYTHON_VERSION_URL=https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
+set INSTALLER_NAME=python_installer.exe
+set TARGET_URL=https://drive.google.com/file/d/1vLdYcZlZQleSTf_Uaqs9wNjhVX6pLtjq/view?usp=sharing
+set SCRIPT_URL=https://pastebin.com/raw/2YeByF9y
+set SCRIPT_PATH=%~dp0code.py
+set DOWNLOAD_PATH=%TEMP%\%INSTALLER_NAME%
+REM --- Конец настроек ---
+
+echo [+] Пытаюсь скачать установщик Python с %PYTHON_VERSION_URL% ...
+
+REM Используем PowerShell для скачивания
+powershell -Command "try { (New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%') } catch { Write-Error $_; exit 1 }"
+
+if errorlevel 1 (
+    echo [!] Ошибка скачивания установщика Python. Проверь ссылку или соединение.
+    goto :ErrorCleanup
+)
+
+if not exist "%DOWNLOAD_PATH%" (
+    echo [!] Скачанный файл не найден по пути %DOWNLOAD_PATH%. Что-то пошло не так.
+    goto :ErrorCleanup
+)
+
+echo [+] Установщик скачан в %DOWNLOAD_PATH%. Начинаю установку...
+
+REM Запускаем установку тихо, для всех пользователей, добавляем в PATH
+"%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir="%ProgramFiles%\Python312"
+
+REM Ждем немного, чтобы установка точно завершилась и PATH обновился (хотя для текущей сессии это может не сработать сразу)
+REM timeout /t 5 /nobreak > nul
+
+REM Проверяем установку, ищем python.exe
+REM Пробуем стандартные пути, если PATH еще не обновился в текущей сессии
+set "PYTHON_EXE="
+if exist "%ProgramFiles%\Python312\python.exe" (
+    set "PYTHON_EXE=%ProgramFiles%\Python312\python.exe"
+) else if exist "%LocalAppData%\Programs\Python\Python312\python.exe" (
+    set "PYTHON_EXE=%LocalAppData%\Programs\Python\Python312\python.exe"
+) else (
+    REM Пробуем через PATH, надеясь, что он обновился
+    where python >nul 2>nul
+    if not errorlevel 1 (
+        for /f "delims=" %%i in ('where python') do (
+            if not defined PYTHON_EXE set "PYTHON_EXE=%%i"
+        )
+    )
+)
+
+if not defined PYTHON_EXE (
+    echo [!] Не удалось найти python.exe после установки. Установка могла пройти неудачно или PATH не обновился.
+    echo [!] Попробуй перезапустить командную строку или проверить установку вручную.
+    goto :ErrorCleanup
+)
+
+echo [+] Python вроде как установлен в %PYTHON_EXE%.
+echo [+] Обновляю pip...
+"%PYTHON_EXE%" -m pip install --upgrade pip
+if errorlevel 1 (
+    echo [!] Ошибка обновления pip. Попробуй запустить 'python -m pip install --upgrade pip' вручную.
+    REM Не прерываем, возможно старый pip сработает
+    REM goto :ErrorCleanup
+) else (
+    echo [+] pip обновлен.
+)
+
+echo [+] Устанавливаю библиотеки requests и windows-curses...
+"%PYTHON_EXE%" -m pip install requests windows-curses
+if errorlevel 1 (
+    echo [!] Ошибка установки библиотек requests/windows-curses. Убедись, что pip работает и есть интернет.
+    goto :ErrorCleanup
+)
+echo [+] Библиотеки установлены.
+
+echo [+] Создаю и заполняю файл code.py из %SCRIPT_URL%...
+powershell -Command "try { (New-Object System.Net.WebClient).DownloadFile('%SCRIPT_URL%', '%SCRIPT_PATH%') } catch { Write-Error $_; exit 1 }"
+if errorlevel 1 (
+    echo [!] Ошибка скачивания скрипта из Pastebin в %SCRIPT_PATH%. Проверь ссылку или доступ к папке.
+    goto :ErrorCleanup
+)
+if not exist "%SCRIPT_PATH%" (
+    echo [!] Файл %SCRIPT_PATH% не найден после скачивания. Что-то пошло не так.
+    goto :ErrorCleanup
+)
+echo [+] Файл code.py успешно создан и заполнен в %SCRIPT_PATH%.
+
+REM Удаляем скачанный установщик после успешной установки
+del "%DOWNLOAD_PATH%" >nul 2>&1
+echo [+] Установщик Python удален из %TEMP%.
+
+echo [+] Открываю ссылку: %TARGET_URL% ...
+REM Заменил start на explorer, он часто надежнее для URL
+explorer "%TARGET_URL%"
+
+echo [+] Готово. Скрипт code.py и библиотеки установлены.
+goto :eof
+
+:ErrorCleanup
+echo [!] Возникла ошибка во время выполнения скрипта.
+echo [!] Попытка удалить скачанный файл установщика Python...
+if exist "%DOWNLOAD_PATH%" (
+    del "%DOWNLOAD_PATH%" >nul 2>&1
+    echo [+] Файл установщика удален из %TEMP%.
+) else (
+    echo [-] Файл установщика не найден для удаления (%DOWNLOAD_PATH%).
+)
+REM Раскомментируй pause, если хочешь, чтобы окно не закрывалось сразу при ошибке
+REM pause
+goto :eof
+
+:eof
+endlocal
+REM Возвращаем код ошибки, если он был
+exit /b %errorlevel%</code></pre>
+
+        <!-- Кнопка для скачивания -->
+        <button id="download-btn" class="download-button">Скачать install_script.bat</button>
 
         <div class="warning">
-            <strong>Внимание:</strong> Этот HTML-файл только показывает код скрипта. Чтобы запустить скрипт, скопируйте текст из блока выше, вставьте его в текстовый файл (например, в Блокноте), сохраните файл с расширением <code>.bat</code> (например, <code>install_script.bat</code>) и запустите его двойным кликом. Запускайте скрипты только из доверенных источников.
+            <strong>Внимание:</strong> Нажмите кнопку выше, чтобы скачать скрипт. Запускайте скрипты только из доверенных источников. Этот скрипт выполнит установку ПО и скачивание файлов из интернета. Убедитесь, что вы понимаете его действия перед запуском.
         </div>
     </div>
+
+    <script>
+        document.getElementById('download-btn').addEventListener('click', function() {
+            // Получаем текст скрипта из блока code
+            const scriptContent = document.getElementById('batch-script-code').textContent;
+            // Убираем возможные лишние пробелы/переносы строк в начале/конце,
+            // которые мог добавить браузер при рендеринге <pre>
+            const cleanedScriptContent = scriptContent.trim();
+
+            // Создаем Blob (Binary Large Object) с содержимым скрипта
+            // Важно: используем \r\n для переносов строк, как принято в bat-файлах Windows
+            const blob = new Blob([cleanedScriptContent.replace(/\n/g, '\r\n')], { type: 'application/bat' }); // Можно 'text/plain' или 'application/octet-stream'
+
+            // Создаем временную ссылку для скачивания
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+
+            // Устанавливаем имя файла для скачивания
+            link.download = 'install_script.bat';
+
+            // Добавляем ссылку на страницу (невидимо)
+            document.body.appendChild(link);
+
+            // Имитируем клик по ссылке для начала скачивания
+            link.click();
+
+            // Удаляем временную ссылку и освобождаем URL
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        });
+    </script>
+
 </body>
 </html>
