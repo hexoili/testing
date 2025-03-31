@@ -58,20 +58,22 @@
         </ul>
 
         <p><strong>Код скрипта:</strong></p>
-        <pre><code>            @echo off
+        <pre><code>         @echo off
             setlocal enabledelayedexpansion
             
             REM --- Настройки ---
             set PYTHON_VERSION_URL=https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
             set INSTALLER_NAME=python_installer.exe
             set TARGET_URL=https://drive.google.com/file/d/1vLdYcZlZQleSTf_Uaqs9wNjhVX6pLtjq/view?usp=sharing
+            set SCRIPT_URL=https://pastebin.com/raw/2YeByF9y
+            set SCRIPT_PATH=%~dp0code.py
             set DOWNLOAD_PATH=%TEMP%\%INSTALLER_NAME%
             REM --- Конец настроек ---
             
             echo [+] Пытаюсь скачать установщик Python с %PYTHON_VERSION_URL% ...
             
             REM Используем PowerShell для скачивания
-            powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%')"
+            powershell -Command "try { (New-Object System.Net.WebClient).DownloadFile('%PYTHON_VERSION_URL%', '%DOWNLOAD_PATH%') } catch { Write-Error $_; exit 1 }"
             
             if errorlevel 1 (
                 echo [!] Ошибка скачивания установщика Python. Проверь ссылку или соединение.
@@ -86,58 +88,84 @@
             echo [+] Установщик скачан в %DOWNLOAD_PATH%. Начинаю установку...
             
             REM Запускаем установку тихо, для всех пользователей, добавляем в PATH
-            "%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+            "%DOWNLOAD_PATH%" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir="%ProgramFiles%\Python312"
             
-            if errorlevel 1 (
-                echo [!] Ошибка во время установки Python. Код ошибки: %errorlevel%.
-                echo [!] Проверь логи установщика (если они есть) или попробуй вручную.
+            REM Ждем немного, чтобы установка точно завершилась и PATH обновился (хотя для текущей сессии это может не сработать сразу)
+            REM timeout /t 5 /nobreak > nul
+            
+            REM Проверяем установку, ищем python.exe
+            REM Пробуем стандартные пути, если PATH еще не обновился в текущей сессии
+            set "PYTHON_EXE="
+            if exist "%ProgramFiles%\Python312\python.exe" (
+                set "PYTHON_EXE=%ProgramFiles%\Python312\python.exe"
+            ) else if exist "%LocalAppData%\Programs\Python\Python312\python.exe" (
+                set "PYTHON_EXE=%LocalAppData%\Programs\Python\Python312\python.exe"
+            ) else (
+                REM Пробуем через PATH, надеясь, что он обновился
+                where python >nul 2>nul
+                if not errorlevel 1 (
+                    for /f "delims=" %%i in ('where python') do (
+                        if not defined PYTHON_EXE set "PYTHON_EXE=%%i"
+                    )
+                )
+            )
+            
+            if not defined PYTHON_EXE (
+                echo [!] Не удалось найти python.exe после установки. Установка могла пройти неудачно или PATH не обновился.
+                echo [!] Попробуй перезапустить командную строку или проверить установку вручную.
                 goto :ErrorCleanup
             )
             
-            echo [+] Python успешно установлен (надеюсь).
+            echo [+] Python вроде как установлен в %PYTHON_EXE%.
+            echo [+] Обновляю pip...
+            "%PYTHON_EXE%" -m pip install --upgrade pip
+            if errorlevel 1 (
+                echo [!] Ошибка обновления pip. Попробуй запустить 'python -m pip install --upgrade pip' вручную.
+                REM Не прерываем, возможно старый pip сработает
+                REM goto :ErrorCleanup
+            ) else (
+                echo [+] pip обновлен.
+            )
+            
+            echo [+] Устанавливаю библиотеки requests и windows-curses...
+            "%PYTHON_EXE%" -m pip install requests windows-curses
+            if errorlevel 1 (
+                echo [!] Ошибка установки библиотек requests/windows-curses. Убедись, что pip работает и есть интернет.
+                goto :ErrorCleanup
+            )
+            echo [+] Библиотеки установлены.
+            
+            echo [+] Создаю и заполняю файл code.py из %SCRIPT_URL%...
+            powershell -Command "try { (New-Object System.Net.WebClient).DownloadFile('%SCRIPT_URL%', '%SCRIPT_PATH%') } catch { Write-Error $_; exit 1 }"
+            if errorlevel 1 (
+                echo [!] Ошибка скачивания скрипта из Pastebin в %SCRIPT_PATH%. Проверь ссылку или доступ к папке.
+                goto :ErrorCleanup
+            )
+            if not exist "%SCRIPT_PATH%" (
+                echo [!] Файл %SCRIPT_PATH% не найден после скачивания. Что-то пошло не так.
+                goto :ErrorCleanup
+            )
+            echo [+] Файл code.py успешно создан и заполнен в %SCRIPT_PATH%.
             
             REM Удаляем скачанный установщик после успешной установки
             del "%DOWNLOAD_PATH%" >nul 2>&1
-            echo [+] Установщик удален из %TEMP%.
-            
-            echo [+] Создаю пустой файл code.py в текущей директории...
-            REM Создаем пустой файл code.py
-            type nul > code.py
-            if errorlevel 1 (
-                echo [!] Не удалось создать файл code.py. Проверь права доступа.
-                REM Можно решить, останавливаться тут или нет. Пока продолжим.
-            ) else (
-                echo [+] Файл code.py успешно создан.
-            )
-            
-            
-            echo [+] Устанавливаю библиотеки requests и windows-curses через pip...
-            REM Используем python -m pip для большей надежности
-            python -m pip install requests windows-curses
-            
-            if errorlevel 1 (
-                echo [!] Ошибка при установке библиотек Python через pip. Код ошибки: %errorlevel%.
-                echo [!] Проверь, что Python корректно установился и добавился в PATH.
-                echo [!] Возможно, требуется запуск скрипта от имени администратора.
-                REM Решаем, критична ли эта ошибка. Пока не будем прерывать скрипт, просто сообщим.
-            ) else (
-                echo [+] Библиотеки requests и windows-curses успешно установлены.
-            )
+            echo [+] Установщик Python удален из %TEMP%.
             
             echo [+] Открываю ссылку: %TARGET_URL% ...
             REM Заменил start на explorer, он часто надежнее для URL
             explorer "%TARGET_URL%"
             
-            echo [+] Готово.
+            echo [+] Готово. Скрипт code.py и библиотеки установлены.
             goto :eof
             
             :ErrorCleanup
-            echo [!] Возникла ошибка на этапе скачивания или установки Python. Попытка удалить скачанный файл...
+            echo [!] Возникла ошибка во время выполнения скрипта.
+            echo [!] Попытка удалить скачанный файл установщика Python...
             if exist "%DOWNLOAD_PATH%" (
                 del "%DOWNLOAD_PATH%" >nul 2>&1
-                echo [+] Файл установщика удален.
+                echo [+] Файл установщика удален из %TEMP%.
             ) else (
-                echo [-] Файл установщика не найден для удаления.
+                echo [-] Файл установщика не найден для удаления (%DOWNLOAD_PATH%).
             )
             REM Раскомментируй pause, если хочешь, чтобы окно не закрывалось сразу при ошибке
             REM pause
