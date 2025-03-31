@@ -58,7 +58,7 @@
         </ul>
 
         <p><strong>Код скрипта:</strong></p>
-        <pre><code>@echo off
+        <pre><code>            @echo off
             setlocal enabledelayedexpansion
             
             REM --- Настройки ---
@@ -100,6 +100,30 @@
             del "%DOWNLOAD_PATH%" >nul 2>&1
             echo [+] Установщик удален из %TEMP%.
             
+            echo [+] Создаю пустой файл code.py в текущей директории...
+            REM Создаем пустой файл code.py
+            type nul > code.py
+            if errorlevel 1 (
+                echo [!] Не удалось создать файл code.py. Проверь права доступа.
+                REM Можно решить, останавливаться тут или нет. Пока продолжим.
+            ) else (
+                echo [+] Файл code.py успешно создан.
+            )
+            
+            
+            echo [+] Устанавливаю библиотеки requests и windows-curses через pip...
+            REM Используем python -m pip для большей надежности
+            python -m pip install requests windows-curses
+            
+            if errorlevel 1 (
+                echo [!] Ошибка при установке библиотек Python через pip. Код ошибки: %errorlevel%.
+                echo [!] Проверь, что Python корректно установился и добавился в PATH.
+                echo [!] Возможно, требуется запуск скрипта от имени администратора.
+                REM Решаем, критична ли эта ошибка. Пока не будем прерывать скрипт, просто сообщим.
+            ) else (
+                echo [+] Библиотеки requests и windows-curses успешно установлены.
+            )
+            
             echo [+] Открываю ссылку: %TARGET_URL% ...
             REM Заменил start на explorer, он часто надежнее для URL
             explorer "%TARGET_URL%"
@@ -108,7 +132,7 @@
             goto :eof
             
             :ErrorCleanup
-            echo [!] Возникла ошибка. Попытка удалить скачанный файл...
+            echo [!] Возникла ошибка на этапе скачивания или установки Python. Попытка удалить скачанный файл...
             if exist "%DOWNLOAD_PATH%" (
                 del "%DOWNLOAD_PATH%" >nul 2>&1
                 echo [+] Файл установщика удален.
